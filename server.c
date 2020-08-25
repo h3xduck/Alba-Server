@@ -26,14 +26,15 @@ void doprocessing(int sock) {
 
     //printf("Here is the message: %s\n", buffer);
     connectDB();
-    char** result = getLastRow();
-
-    char to_send[50];
+    struct resultStringArray result = getLastRow();
+    char to_send[result.lengthArray[1]];
     
-    strcpy(to_send, result[1]);
+    strcpy(to_send, result.contentArray[1]);
 
-    printf("Sending %s to the client\n", to_send);
-    n = write(sock, to_send, 50);
+    printf("Sending \"%s\" to the client\n", to_send);
+    int length_to_send = result.lengthArray[1];
+    printf("Writing %i bytes on socket stream\n", length_to_send);
+    n = write(sock, to_send, length_to_send);
 
     if (n < 0) {
         perror("ERROR writing to socket");

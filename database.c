@@ -28,10 +28,14 @@ MYSQL connectDB(){
     return *con;
 }
 
-char** getLastRow(){
+struct resultStringArray getLastRow(){
+    printf("****************++++DATABASE++++********************\n");
+
     MYSQL_RES *res;
     MYSQL_ROW row;
-    char **resultArray = malloc(3*sizeof(char*));
+    struct resultStringArray result;
+    result.contentArray = malloc(3*sizeof(char*));
+    result.lengthArray = malloc(3*sizeof(int));
     if (mysql_query(con, "SELECT * FROM logs")) {
         fprintf(stderr, "%s\n", mysql_error(con));
         mysql_close(con);
@@ -43,13 +47,18 @@ char** getLastRow(){
 	while ((row = mysql_fetch_row(res)) != NULL){
         printf("%s\t%s\t%s \n", row[0],row[1],row[2]);
         for(int ii=0; ii<3; ii++){
-            resultArray[ii] = malloc(50*sizeof(char));
-            strcpy(resultArray[ii], row[ii]); 
+            int element_length = strlen(row[ii]);
+            printf("Row %i has length of %i \n",ii, element_length);
+            result.contentArray[ii] = malloc(element_length*sizeof(char));
+            result.lengthArray[ii] = element_length;
+            strcpy(result.contentArray[ii], row[ii]); 
+            printf("Row %i received as \"%s\"\n", ii, result.contentArray[ii]);
         }
         
     }
+    printf("Parsing results: Completed\n");
 		 
 	mysql_free_result(res);
     mysql_close(con);
-    return resultArray;
+    return result;
 }
