@@ -6,9 +6,24 @@
 #include <unistd.h>
 #include <time.h>
 #include "database.h"
+#include <json-c/json.h>
 
 void signalHandler(){
     
+}
+
+json_object* create_custom_json(struct resultStringArray resultArray){
+    json_object * jobj = json_object_new_object();
+    json_object *jstring0 = json_object_new_string(resultArray.contentArray[0]);
+    json_object *jstring1 = json_object_new_string(resultArray.contentArray[1]);
+    json_object *jstring2 = json_object_new_string(resultArray.contentArray[2]);
+
+    json_object_object_add(jobj,"Date", jstring0);
+    json_object_object_add(jobj,"Content", jstring1);
+    json_object_object_add(jobj,"User", jstring2);
+    printf ("The json object created: %s\n",json_object_to_json_string(jobj));
+    
+    return jobj;
 }
 
 void doprocessing(int sock) {
@@ -27,12 +42,14 @@ void doprocessing(int sock) {
     //printf("Here is the message: %s\n", buffer);
     connectDB();
     struct resultStringArray result = getLastRow();
-    char to_send[result.lengthArray[1]];
+
+    json_object* jobj = create_custom_json(result);
     
-    strcpy(to_send, result.contentArray[1]);
+    const char* to_send = json_object_to_json_string_ext(jobj,JSON_C_TO_STRING_PRETTY);
+    
 
     printf("Sending \"%s\" to the client\n", to_send);
-    int length_to_send = result.lengthArray[1];
+    int length_to_send = strlen(to_send);
     printf("Writing %i bytes on socket stream\n", length_to_send);
     n = write(sock, to_send, length_to_send);
 
