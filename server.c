@@ -45,7 +45,9 @@ void doprocessing(int sock) {
 
     json_object* jobj = create_custom_json(result);
     
-    const char* to_send = json_object_to_json_string_ext(jobj,JSON_C_TO_STRING_PRETTY);
+    char* to_send;
+    strcpy(to_send,"INCLUDE:");
+    strcat(to_send,json_object_to_json_string_ext(jobj,JSON_C_TO_STRING_PRETTY));
     
 
     printf("Sending \"%s\" to the client\n", to_send);
