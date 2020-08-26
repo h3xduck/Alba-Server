@@ -32,14 +32,14 @@ void doprocessing(int sock) {
     int n;
     char buffer[256];
     bzero(buffer, 256);
-    //n = read(sock, buffer, 255);
+    n = read(sock, buffer, 255);
 
     if (n < 0) {
         perror("ERROR reading from socket");
         exit(1);
     }
 
-    //printf("Here is the message: %s\n", buffer);
+    printf("Message received from client: %s\n", buffer);
     connectDB();
     struct resultStringArray result = getLastRow();
 
