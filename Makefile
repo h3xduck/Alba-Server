@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS  = -lmysqlclient -lz -ljson-c
+CFLAGS  = -lmysqlclient -lz -ljson-c -pthread
 
 # typing 'make' will invoke the first target entry in the file 
 # (in this case the default target entry)

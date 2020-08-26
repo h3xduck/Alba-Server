@@ -7,9 +7,12 @@
 #include <time.h>
 #include "database.h"
 #include <json-c/json.h>
+#include <signal.h>
+#include <pthread.h>
 
 void signalHandler(){
-    
+    printf("Process exited by signal handler\n");
+    exit(0);
 }
 
 json_object* create_custom_json(struct resultStringArray resultArray){
@@ -26,27 +29,46 @@ json_object* create_custom_json(struct resultStringArray resultArray){
     return jobj;
 }
 
+void* reading_thread_routine(void* params){
+    int sock = *((int*) params);
+    printf("Reader thread received %i as parameter\n");
+    
+    
+    char * line = NULL;
+    size_t len = 0;
+    ssize_t read;
+    FILE* fp = fdopen(sock, "r");
+    if(fp == NULL){
+        perror("Couldn't open file pointer");
+    }
+    while(0){
+        
+        while ((read = getline(&line, &len, fp)) != -1) {
+            printf("Retrieved line of length %zu:\n", read);
+            printf("Message received from client: %s\n", line);
+        }
+        sleep(5);
+        printf("Attempted to read...\n");
+    }
+    
+
+    printf("Finished reader thread\n");
+
+}
+
 void doprocessing(int sock) {
+    pthread_t reading_thread; //We need another thread to process the data sent by the client.
+    int n;
+
+    //pthread_create(&reading_thread, NULL, reading_thread_routine, &sock);
+
     printf("Starting processing\n");
 
-    int n;
-    char buffer[256];
-    bzero(buffer, 256);
-    n = read(sock, buffer, 255);
-
-    if (n < 0) {
-        perror("ERROR reading from socket");
-        exit(1);
-    }
-
-    printf("Message received from client: %s\n", buffer);
     connectDB();
     struct resultStringArray result = getLastRow();
 
     json_object* jobj = create_custom_json(result);
-    
-    char* to_send;
-    strcpy(to_send,"INCLUDE:");
+    char* to_send = strdup("INCLUDE:");
     strcat(to_send,json_object_to_json_string_ext(jobj,JSON_C_TO_STRING_PRETTY));
     
 
@@ -54,12 +76,21 @@ void doprocessing(int sock) {
     int length_to_send = strlen(to_send);
     printf("Writing %i bytes on socket stream\n", length_to_send);
     n = write(sock, to_send, length_to_send);
-
+    printf("Comleted!\n");
     if (n < 0) {
         perror("ERROR writing to socket");
         exit(1);
     }
+
+    while (0){
+        //TODO: IF YOU SET THIS TO 1, CLIENT RECEIVES NOTHING.
+        //Trapped here for now, until implementation of listening of client's commands.
+        //Must not exit the proccess.
+    }
+    
 }
+
+
 
 int main(int argc, char *argv[]) {
     
@@ -91,6 +122,11 @@ int main(int argc, char *argv[]) {
         perror("ERROR on binding");
         exit(1);
     }
+
+
+    //Registering SIGINT signal handler. The signal is received by BOTH THE PARENT AND CHILD.
+    signal(SIGINT, signalHandler); 
+
 
     printf("Started listening to connections\n");
     /* Now start listening for the clients, here
