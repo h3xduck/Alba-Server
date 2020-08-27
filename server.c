@@ -56,10 +56,37 @@ void* reading_thread_routine(void* params){
 
 }
 
+void send_init_connection_message(int sock){
+    int fillerArrayLength = 1024*sizeof(char);
+    char *fillerArray = malloc(fillerArrayLength);
+    memset(fillerArray, 0, fillerArrayLength);
+    printf("Filler array is: %s", fillerArray);
+    printf("Called init connection message\n");
+
+    char* header = "STARTCONN::";
+    char* separator = "\n##ALBA##\n";
+    int totalLength = strlen(header)+ strlen(separator)+ fillerArrayLength+ 1;
+    char* to_send = calloc(strlen(header)+ strlen(separator)+ fillerArrayLength+ 1, sizeof(char));
+    strcpy(to_send, header);
+    strcat(to_send, separator);
+    strcat(to_send, fillerArray);
+    printf("Total length is %i\n", totalLength);
+
+    int n = write(sock, to_send, 1024);
+    printf("Sending STARTCONN message\n");
+    if (n < 0) {
+        perror("ERROR writing to socket");
+        exit(1);
+    }
+    free(fillerArray);
+    free(to_send);
+}
+
 void doprocessing(int sock) {
     pthread_t reading_thread; //We need another thread to process the data sent by the client.
     int n;
-
+    char *fillerArray = malloc(1024);
+    bzero(fillerArray, 1024);
     //pthread_create(&reading_thread, NULL, reading_thread_routine, &sock);
 
     printf("Starting processing\n");
@@ -68,21 +95,44 @@ void doprocessing(int sock) {
     struct resultStringArray result = getLastRow();
 
     json_object* jobj = create_custom_json(result);
-    char* to_send = strdup("INCLUDE:");
-    strcat(to_send,json_object_to_json_string_ext(jobj,JSON_C_TO_STRING_PRETTY));
+    char* jobjstr = (char*)json_object_to_json_string_ext(jobj,JSON_C_TO_STRING_PRETTY);
+    printf("Received JSON string was: %s\n", jobjstr);
+    char* header = "INCLUDE::";
+    char* delimitor = "\n##ALBA##\n";
+    char* to_send = calloc(strlen(jobjstr)+strlen(header)+strlen(delimitor)+ sizeof(fillerArray)+1, sizeof(char));
+    
+    //Now that we have the complete message, we proceed to adjust it to the protocol.
+    char* token = strtok(jobjstr, "\n");
+    printf("Part 0 is: %s\n", token);
+
+    //First, the header
+    strcpy(to_send, header);
+    //Next, the content of the message (the token in this case)
+    strcat(to_send, token);
+    //We put a delimitor, unlikely to appear in a normal connection
+    strcat(to_send, delimitor);
+    //Finally we concatenate the string with the filler string
+    strcat(to_send, fillerArray);
+    
+    
+
+    send_init_connection_message(sock);
+
     
 
     printf("Sending \"%s\" to the client\n", to_send);
-    int length_to_send = strlen(to_send);
-    printf("Writing %i bytes on socket stream\n", length_to_send);
-    n = write(sock, to_send, length_to_send);
-    printf("Comleted!\n");
+    printf("Writing %i bytes on socket stream\n", 1024);
+    n = write(sock, to_send, 1024);
+    printf("Completed!\n");
     if (n < 0) {
         perror("ERROR writing to socket");
         exit(1);
     }
 
+    //printf("Flushed buffer to client\n");
     while (0){
+        printf("Trapped\n");
+        sleep(5);
         //TODO: IF YOU SET THIS TO 1, CLIENT RECEIVES NOTHING.
         //Trapped here for now, until implementation of listening of client's commands.
         //Must not exit the proccess.

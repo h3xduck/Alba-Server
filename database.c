@@ -29,7 +29,7 @@ MYSQL connectDB(){
 }
 
 struct resultStringArray getLastRow(){
-    printf("****************++++DATABASE++++********************\n");
+    printf("****************++++OPENING DATABASE++++********************\n");
 
     MYSQL_RES *res;
     MYSQL_ROW row;
@@ -47,10 +47,10 @@ struct resultStringArray getLastRow(){
 	while ((row = mysql_fetch_row(res)) != NULL){
         printf("%s\t%s\t%s \n", row[0],row[1],row[2]);
         for(int ii=0; ii<3; ii++){
-            int element_length = strlen(row[ii]);
-            printf("Row %i has length of %i \n",ii, element_length);
-            result.contentArray[ii] = malloc(element_length*sizeof(char));
-            result.lengthArray[ii] = element_length;
+            //int element_length = strlen(row[ii]+1);
+            //printf("Row %i has length of %i \n",ii, element_length);
+            result.contentArray[ii] = strdup(row[ii]);
+            result.lengthArray[ii] = strlen(row[ii]);
             strcpy(result.contentArray[ii], row[ii]); 
             printf("Row %i received as \"%s\"\n", ii, result.contentArray[ii]);
         }
@@ -60,5 +60,7 @@ struct resultStringArray getLastRow(){
 		 
 	mysql_free_result(res);
     mysql_close(con);
+
+    printf("****************++++CLOSING DATABASE++++********************\n");
     return result;
 }
