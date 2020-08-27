@@ -41,13 +41,14 @@ void* reading_thread_routine(void* params) {
     if (fp == NULL) {
         perror("Couldn't open file pointer");
     }
-    while (0) {
+    while (1) {
+        printf("Attempting to read...\n");
         while ((read = getline(&line, &len, fp)) != -1) {
             printf("Retrieved line of length %zu:\n", read);
             printf("Message received from client: %s\n", line);
         }
         sleep(5);
-        printf("Attempted to read...\n");
+        
     }
 
     printf("Finished reader thread\n");
@@ -108,7 +109,7 @@ void doprocessing(int sock) {
     int n;
     char* fillerArray = malloc(1024);
     bzero(fillerArray, 1024);
-    //pthread_create(&reading_thread, NULL, reading_thread_routine, &sock);
+    pthread_create(&reading_thread, NULL, reading_thread_routine, &sock);
 
     printf("Starting processing\n");
 
