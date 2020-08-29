@@ -8,8 +8,13 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
-
+#include "parser.h"
 #include "database.h"
+
+#define PROTOCOL_STANDARD_MESSAGE_LENGTH 1024
+
+int fillerArrayLength = PROTOCOL_STANDARD_MESSAGE_LENGTH * sizeof(char);
+char* fillerArray; //memory allocated at main.
 
 void signalHandler() {
     printf("Process exited by signal handler\n");
@@ -37,24 +42,21 @@ void* reading_thread_routine(void* params) {
     char* line = NULL;
     size_t len = 0;
     ssize_t lines;
-    char buffer[1024];
+    char buffer[PROTOCOL_STANDARD_MESSAGE_LENGTH];
     while (1) {
         printf("Attempting to read...\n");
-        if (lines = read(sock, buffer, 1024) > 0) {
+        if (lines = read(sock, buffer, PROTOCOL_STANDARD_MESSAGE_LENGTH) > 0) {
             printf("Retrieved line of length %zu:\n", lines);
             printf("Message received from client: %s\n", buffer);
+            struct parser_result = protocol_parse(buffer);
         }
         sleep(5);
-        
     }
 
     printf("Finished reader thread\n");
 }
 
 void send_init_connection_message(int sock) {
-    int fillerArrayLength = 1024 * sizeof(char);
-    char* fillerArray = malloc(fillerArrayLength);
-    memset(fillerArray, 0, fillerArrayLength);
     printf("Called init connection message\n");
 
     char* header = "STARTCONN::";
@@ -66,20 +68,16 @@ void send_init_connection_message(int sock) {
     strcat(to_send, fillerArray);
     printf("Total length is %i\n", totalLength);
 
-    int n = write(sock, to_send, 1024);
+    int n = write(sock, to_send, PROTOCOL_STANDARD_MESSAGE_LENGTH);
     printf("Sending STARTCONN message\n");
     if (n < 0) {
         perror("ERROR writing to socket");
         exit(1);
     }
-    free(fillerArray);
     free(to_send);
 }
 
 void send_end_connection_message(int sock) {
-    int fillerArrayLength = 1024 * sizeof(char);
-    char* fillerArray = malloc(fillerArrayLength);
-    memset(fillerArray, 0, fillerArrayLength);
     printf("Called end connection message\n");
 
     char* header = "ENDCONN::";
@@ -91,22 +89,18 @@ void send_end_connection_message(int sock) {
     strcat(to_send, fillerArray);
     printf("Total length is %i\n", totalLength);
 
-    int n = write(sock, to_send, 1024);
+    int n = write(sock, to_send, PROTOCOL_STANDARD_MESSAGE_LENGTH);
     printf("Sending ENDCONN message\n");
     if (n < 0) {
         perror("ERROR writing to socket");
         exit(1);
     }
-    free(fillerArray);
     free(to_send);
 }
 
 void doprocessing(int sock) {
     pthread_t reading_thread;  //We need another thread to process the data sent by the client.
     int n;
-    int fillerArrayLength = 1024*sizeof(char);
-    char* fillerArray = calloc(fillerArrayLength, sizeof(char));
-    //bzero(fillerArray, 1024*sizeof(char));
     pthread_create(&reading_thread, NULL, reading_thread_routine, &sock);
 
     printf("Starting processing\n");
@@ -141,8 +135,8 @@ void doprocessing(int sock) {
         strcat(to_send, fillerArray);
 
         printf("Sending \"%s\" to the client\n", to_send);
-        printf("Writing %i bytes on socket stream\n", 1024);
-        n = write(sock, to_send, 1024);
+        printf("Writing %i bytes on socket stream\n", PROTOCOL_STANDARD_MESSAGE_LENGTH);
+        n = write(sock, to_send, PROTOCOL_STANDARD_MESSAGE_LENGTH);
         if (n < 0) {
             perror("ERROR writing to socket");
             exit(1);
@@ -154,7 +148,6 @@ void doprocessing(int sock) {
         ii++;
     }
     printf("Completed message in %i rounds!\n", ii);
-    free(fillerArray);
     send_end_connection_message(sock);  //Announcing end of message to the client
 
 
@@ -173,6 +166,7 @@ int main(int argc, char* argv[]) {
     struct sockaddr_in serv_addr, cli_addr;
     int n, pid;
     int conn_number = 0;
+    fillerArray = calloc(fillerArrayLength, sizeof(char));
 
     /* First call to socket() function */
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -236,4 +230,6 @@ int main(int argc, char* argv[]) {
         }
 
     } /* end of while */
+
+    free(fillerArray);
 }
