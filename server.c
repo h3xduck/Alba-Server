@@ -36,16 +36,13 @@ void* reading_thread_routine(void* params) {
 
     char* line = NULL;
     size_t len = 0;
-    ssize_t read;
-    FILE* fp = fdopen(sock, "r");
-    if (fp == NULL) {
-        perror("Couldn't open file pointer");
-    }
+    ssize_t lines;
+    char buffer[1024];
     while (1) {
         printf("Attempting to read...\n");
-        while ((read = getline(&line, &len, fp)) != -1) {
-            printf("Retrieved line of length %zu:\n", read);
-            printf("Message received from client: %s\n", line);
+        if (lines = read(sock, buffer, 1024) > 0) {
+            printf("Retrieved line of length %zu:\n", lines);
+            printf("Message received from client: %s\n", buffer);
         }
         sleep(5);
         
@@ -107,8 +104,9 @@ void send_end_connection_message(int sock) {
 void doprocessing(int sock) {
     pthread_t reading_thread;  //We need another thread to process the data sent by the client.
     int n;
-    char* fillerArray = malloc(1024);
-    bzero(fillerArray, 1024);
+    int fillerArrayLength = 1024*sizeof(char);
+    char* fillerArray = calloc(fillerArrayLength, sizeof(char));
+    //bzero(fillerArray, 1024*sizeof(char));
     pthread_create(&reading_thread, NULL, reading_thread_routine, &sock);
 
     printf("Starting processing\n");
@@ -123,13 +121,15 @@ void doprocessing(int sock) {
     printf("Received JSON string was: %s\n", jobjstr);
     char* header = "INCLUDE::";
     char* delimitor = "\n##ALBA##\n";
-    char* to_send = calloc(strlen(jobjstr) + strlen(header) + strlen(delimitor) + sizeof(fillerArray) + 1, sizeof(char));
 
     //Now that we have the complete message, we proceed to adjust it to the protocol.
     char* token = strtok(jobjstr, "\n");
     int ii = 0;
     while (token != NULL) {
+        int to_send_length = strlen(token) + strlen(header) + strlen(delimitor) + fillerArrayLength + 1;
+        char* to_send = calloc(to_send_length, sizeof(char));
         printf("Part %i is: %s\n", ii, token);
+        printf("With length %i bytes\n", to_send_length);
 
         //First, the header
         strcpy(to_send, header);
@@ -150,17 +150,18 @@ void doprocessing(int sock) {
 
         //Next token
         token = strtok(NULL, "\n");
+        free(to_send);
         ii++;
     }
     printf("Completed message in %i rounds!\n", ii);
-
+    free(fillerArray);
     send_end_connection_message(sock);  //Announcing end of message to the client
 
 
     //printf("Flushed buffer to client\n");
     while (1) {
         printf("Trapped\n");
-        sleep(5);
+        sleep(15);
         //Trapped here for now, until implementation of listening of client's commands.
         //Must not exit the proccess.
     }
