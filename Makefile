@@ -6,9 +6,9 @@ CFLAGS  = -lmysqlclient -lz -ljson-c -pthread
 all: server
 
 # To create the object file server.o, we need the source
-# files server.c, database.h, and database.c:
+# files server.c, database.h, database.c, parser.h and parser.c:
 #
-server.o:  server.c database.h database.c 
+server.o:  server.c database.h database.c parser.h parser.c
 	$(CC) $(CFLAGS) -c server.c
 
 # To create the object file database.o, we need the source files
@@ -17,11 +17,17 @@ server.o:  server.c database.h database.c
 database.o:  database.c database.h 
 	$(CC) $(CFLAGS) -c database.c
 
-# To create the executable file count we need the object files
-# server.o, database.o
+# To create the object file parser.o, we need the source files
+# parser.c and parser.h:
 #
-server:  server.o database.o
-	$(CC) $(CFLAGS) -o server server.o database.o
+parser.o:  parser.c parser.h 
+	$(CC) $(CFLAGS) -c parser.c
+
+# To create the executable file count we need the object files
+# server.o, database.o, parser.o
+#
+server:  server.o database.o parser.o
+	$(CC) $(CFLAGS) -o server server.o database.o parser.o
 
 # To start over from scratch, type 'make clean'.  This
 # removes the executable file, as well as old .o object

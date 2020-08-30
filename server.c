@@ -48,7 +48,9 @@ void* reading_thread_routine(void* params) {
         if (lines = read(sock, buffer, PROTOCOL_STANDARD_MESSAGE_LENGTH) > 0) {
             printf("Retrieved line of length %zu:\n", lines);
             printf("Message received from client: %s\n", buffer);
-            struct parser_result = protocol_parse(buffer);
+            struct parser_result result = protocol_parse(buffer);
+            printf("Parser code for message is: %i", result.result_code);
+            printf("Parser buffer is %s", result.result_buffer);
         }
         sleep(5);
     }
@@ -168,7 +170,7 @@ int main(int argc, char* argv[]) {
     int conn_number = 0;
     fillerArray = calloc(fillerArrayLength, sizeof(char));
 
-    /* First call to socket() function */
+    // First call to socket() function
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
 
     if (sockfd < 0) {
@@ -184,7 +186,7 @@ int main(int argc, char* argv[]) {
     serv_addr.sin_addr.s_addr = INADDR_ANY;
     serv_addr.sin_port = htons(portno);
 
-    /* Now bind the host address using bind() call.*/
+    // Now bind the host address using bind() call.
     if (bind(sockfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) < 0) {
         perror("ERROR on binding");
         exit(1);
@@ -211,7 +213,7 @@ int main(int argc, char* argv[]) {
         }
         printf("Success: Connection %i opened\n", conn_number++);
 
-        /* Create child process */
+        // Create child process
         pid = fork();
 
         if (pid < 0) {
@@ -220,7 +222,7 @@ int main(int argc, char* argv[]) {
         }
 
         if (pid == 0) {
-            /* This is the client process */
+            // This is the client process
             close(sockfd);
             doprocessing(newsockfd);
             printf("Closing connection...\n");
@@ -229,7 +231,7 @@ int main(int argc, char* argv[]) {
             close(newsockfd);
         }
 
-    } /* end of while */
+    } // end of while
 
     free(fillerArray);
 }
