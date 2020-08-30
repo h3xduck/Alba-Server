@@ -21,6 +21,10 @@ void signalHandler() {
     exit(0);
 }
 
+/**
+ * 
+ * 
+ */
 json_object* create_custom_json(struct resultStringArray resultArray) {
     json_object* jobj = json_object_new_object();
     json_object* jstring0 = json_object_new_string(resultArray.contentArray[0]);
@@ -35,6 +39,39 @@ json_object* create_custom_json(struct resultStringArray resultArray) {
     return jobj;
 }
 
+/**
+ * Generic function to send a message to the client.
+ * @param sock: socket descriptor
+ * @param header: header for the message
+ * @param content: content to send
+ */ 
+void send_message(int sock, const char* header, const char* content){
+    char* separator = "\n##ALBA##\n";
+    int totalLength = strlen(header) + strlen(separator) + fillerArrayLength + 1;
+    char* to_send = calloc(strlen(content) + strlen(header) + strlen(separator) + fillerArrayLength + 1, sizeof(char));
+    printf("Sending %i bytes\n", totalLength);
+    strcpy(to_send, header);
+    strcat(to_send, content);
+    strcat(to_send, separator);
+    strcat(to_send, fillerArray);
+    int n = write(sock, to_send, PROTOCOL_STANDARD_MESSAGE_LENGTH);
+    printf("Sending %s\n", to_send);
+    if (n < 0) {
+        perror("ERROR writing to socket");
+        exit(1);
+    }
+
+    free(to_send);
+}
+
+
+/**
+ * Sends a PONG message to the client connected to sock. 
+ */ 
+void sendPONG(int sock){
+    send_message(sock, "PONG::", "Hello client");
+}
+
 void* reading_thread_routine(void* params) {
     int sock = *((int*)params);
     printf("Reader thread received %i as parameter\n");
@@ -44,13 +81,20 @@ void* reading_thread_routine(void* params) {
     ssize_t lines;
     char buffer[PROTOCOL_STANDARD_MESSAGE_LENGTH];
     while (1) {
-        printf("Attempting to read...\n");
         if (lines = read(sock, buffer, PROTOCOL_STANDARD_MESSAGE_LENGTH) > 0) {
-            printf("Retrieved line of length %zu:\n", lines);
-            printf("Message received from client: %s\n", buffer);
             struct parser_result result = protocol_parse(buffer);
-            printf("Parser code for message is: %i", result.result_code);
-            printf("Parser buffer is %s", result.result_buffer);
+            printf("Parser code for message is: %i\n", result.result_code);
+            printf("Parser buffer is %s\n", result.result_buffer);
+            //Here we decide what to do with the already parsed message.
+            switch (result.result_code)
+            {
+            case 3:
+                printf("Received PING\n");
+                sendPONG(sock);
+                break;
+            default:
+                break;
+            }
         }
         sleep(5);
     }
@@ -100,13 +144,8 @@ void send_end_connection_message(int sock) {
     free(to_send);
 }
 
-void doprocessing(int sock) {
-    pthread_t reading_thread;  //We need another thread to process the data sent by the client.
+void send_DB_lastrow_as_JSON(int sock){
     int n;
-    pthread_create(&reading_thread, NULL, reading_thread_routine, &sock);
-
-    printf("Starting processing\n");
-
     connectDB();
     struct resultStringArray result = getLastRow();
 
@@ -151,9 +190,22 @@ void doprocessing(int sock) {
     }
     printf("Completed message in %i rounds!\n", ii);
     send_end_connection_message(sock);  //Announcing end of message to the client
+}
 
 
-    //printf("Flushed buffer to client\n");
+/**
+ * Here we start the reader thread, and wait for instructions / requests.
+ * 
+ */
+void doprocessing(int sock) {
+    pthread_t reading_thread;  //We need another thread to process the data sent by the client.
+    pthread_create(&reading_thread, NULL, reading_thread_routine, &sock);
+    
+    printf("Starting processing\n");
+
+    send_DB_lastrow_as_JSON(sock);
+
+
     while (1) {
         printf("Trapped\n");
         sleep(15);

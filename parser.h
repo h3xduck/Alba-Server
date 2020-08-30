@@ -9,6 +9,7 @@ struct parser_result{
      * 2 if it is some info sent by the client, not needed to be included in the DB
      * 3 if it is a PING
      * 4 if it is a PONG
+     * 5 if it is a REQUEST (from the client)
      * -1 if error (parser could not parse)
      * 100 if communication starts
      * 200 if communication ends
