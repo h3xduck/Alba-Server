@@ -47,13 +47,19 @@ json_object* create_custom_json(struct resultStringArray resultArray) {
  */ 
 void send_message(int sock, const char* header, const char* content){
     char* separator = "\n##ALBA##\n";
-    int totalLength = strlen(header) + strlen(separator) + fillerArrayLength + 1;
-    char* to_send = calloc(strlen(content) + strlen(header) + strlen(separator) + fillerArrayLength + 1, sizeof(char));
+    int totalLength = strlen(content)+ strlen(header) + strlen(separator) + fillerArrayLength + 1;
+    char* to_send = calloc(totalLength, sizeof(char));
     printf("Sending %i bytes\n", totalLength);
+
+    //First, the header
     strcpy(to_send, header);
+    //Next, the content of the message (the token in this case)
     strcat(to_send, content);
+    //We put a delimitor, unlikely to appear in a normal connection
     strcat(to_send, separator);
+    //Finally we concatenate the string with the filler string
     strcat(to_send, fillerArray);
+
     int n = write(sock, to_send, PROTOCOL_STANDARD_MESSAGE_LENGTH);
     printf("Sending %s\n", to_send);
     if (n < 0) {
@@ -103,45 +109,13 @@ void* reading_thread_routine(void* params) {
 }
 
 void send_init_connection_message(int sock) {
-    printf("Called init connection message\n");
-
-    char* header = "STARTCONN::";
-    char* separator = "\n##ALBA##\n";
-    int totalLength = strlen(header) + strlen(separator) + fillerArrayLength + 1;
-    char* to_send = calloc(strlen(header) + strlen(separator) + fillerArrayLength + 1, sizeof(char));
-    strcpy(to_send, header);
-    strcat(to_send, separator);
-    strcat(to_send, fillerArray);
-    printf("Total length is %i\n", totalLength);
-
-    int n = write(sock, to_send, PROTOCOL_STANDARD_MESSAGE_LENGTH);
     printf("Sending STARTCONN message\n");
-    if (n < 0) {
-        perror("ERROR writing to socket");
-        exit(1);
-    }
-    free(to_send);
+    send_message(sock, "STARTCONN::", "");
 }
 
 void send_end_connection_message(int sock) {
-    printf("Called end connection message\n");
-
-    char* header = "ENDCONN::";
-    char* separator = "\n##ALBA##\n";
-    int totalLength = strlen(header) + strlen(separator) + fillerArrayLength + 1;
-    char* to_send = calloc(strlen(header) + strlen(separator) + fillerArrayLength + 1, sizeof(char));
-    strcpy(to_send, header);
-    strcat(to_send, separator);
-    strcat(to_send, fillerArray);
-    printf("Total length is %i\n", totalLength);
-
-    int n = write(sock, to_send, PROTOCOL_STANDARD_MESSAGE_LENGTH);
     printf("Sending ENDCONN message\n");
-    if (n < 0) {
-        perror("ERROR writing to socket");
-        exit(1);
-    }
-    free(to_send);
+    send_message(sock, "ENDCONN::", "");
 }
 
 void send_DB_lastrow_as_JSON(int sock){
@@ -155,47 +129,20 @@ void send_DB_lastrow_as_JSON(int sock){
     char* jobjstr = (char*)json_object_to_json_string_ext(jobj, JSON_C_TO_STRING_PRETTY);
     printf("Received JSON string was: %s\n", jobjstr);
     char* header = "INCLUDE::";
-    char* delimitor = "\n##ALBA##\n";
 
     //Now that we have the complete message, we proceed to adjust it to the protocol.
     char* token = strtok(jobjstr, "\n");
-    int ii = 0;
     while (token != NULL) {
-        int to_send_length = strlen(token) + strlen(header) + strlen(delimitor) + fillerArrayLength + 1;
-        char* to_send = calloc(to_send_length, sizeof(char));
-        printf("Part %i is: %s\n", ii, token);
-        printf("With length %i bytes\n", to_send_length);
-
-        //First, the header
-        strcpy(to_send, header);
-        //Next, the content of the message (the token in this case)
-        strcat(to_send, token);
-        //We put a delimitor, unlikely to appear in a normal connection
-        strcat(to_send, delimitor);
-        //Finally we concatenate the string with the filler string
-        strcat(to_send, fillerArray);
-
-        printf("Sending \"%s\" to the client\n", to_send);
-        printf("Writing %i bytes on socket stream\n", PROTOCOL_STANDARD_MESSAGE_LENGTH);
-        n = write(sock, to_send, PROTOCOL_STANDARD_MESSAGE_LENGTH);
-        if (n < 0) {
-            perror("ERROR writing to socket");
-            exit(1);
-        }
-
-        //Next token
+        send_message(sock, header, token);
         token = strtok(NULL, "\n");
-        free(to_send);
-        ii++;
     }
-    printf("Completed message in %i rounds!\n", ii);
+    printf("Completed JSON message!");
     send_end_connection_message(sock);  //Announcing end of message to the client
 }
 
 
 /**
  * Here we start the reader thread, and wait for instructions / requests.
- * 
  */
 void doprocessing(int sock) {
     pthread_t reading_thread;  //We need another thread to process the data sent by the client.
