@@ -78,10 +78,7 @@ void sendPONG(int sock){
     send_message(sock, "PONG::", "Hello client");
 }
 
-void* reading_thread_routine(void* params) {
-    int sock = *((int*)params);
-    printf("Reader thread received %i as parameter\n");
-
+void reading_thread_routine(int sock){
     char* line = NULL;
     size_t len = 0;
     ssize_t lines;
@@ -144,13 +141,12 @@ void send_DB_lastrow_as_JSON(int sock){
 /**
  * Here we start the reader thread, and wait for instructions / requests.
  */
-void doprocessing(int sock) {
-    pthread_t reading_thread;  //We need another thread to process the data sent by the client.
-    pthread_create(&reading_thread, NULL, reading_thread_routine, &sock);
-    
+void doprocessing(int sock) {   
     printf("Starting processing\n");
-
-    send_DB_lastrow_as_JSON(sock);
+    reading_thread_routine(sock);
+    
+    
+    //send_DB_lastrow_as_JSON(sock);
 
 
     while (1) {
