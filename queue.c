@@ -3,45 +3,65 @@
 #include <stdlib.h>
 #include <string.h>
 #include "parser.h"
+#include <pthread.h>
+#include "messages.h"
 
-#define MAX 10
+extern pthread_mutex_t queue_mutex;  
+extern pthread_cond_t queue_non_empty;
+extern pthread_cond_t queue_non_full;
 
-struct parser_result dataArray[MAX];
+#define MAX_ENQUEUED_REQUESTS 10
+
+struct message_manager_element* dataArray[MAX_ENQUEUED_REQUESTS];
 int front = 0;
 int rear = -1;
 int itemCount = 0;
 
-struct parser_result top() {
-    return dataArray[front];
+struct message_manager_element queue_top() {
+    return *dataArray[front];
 }
 
-bool isEmpty() {
+bool queue_isEmpty() {
     return itemCount == 0;
 }
 
-bool isFull() {
-    return itemCount == MAX;
+bool queue_isFull() {
+    return itemCount == MAX_ENQUEUED_REQUESTS;
 }
 
-int size() {
+int queue_size() {
     return itemCount;
 }
 
-void enqueue(struct parser_result data) {
-    if (!isFull()) {
-        if (rear == MAX - 1) {
-            rear = -1;
-        }
-        dataArray[++rear] = data;
-        itemCount++;
+void queue_enqueue(struct message_manager_element* data) {
+    while(queue_isFull()){
+        //The server reader must wait for some thread to dequeue a task.
+        printf("Blocked enqueueing\n");
+        pthread_cond_wait(&queue_non_full, &queue_mutex);
+        
     }
+    if (rear == MAX_ENQUEUED_REQUESTS - 1) {
+        rear = -1;
+    }
+    dataArray[++rear] = data;
+    printf("Enqueue element on position %i!\n", rear);
+    itemCount++;
+    pthread_cond_signal(&queue_non_empty);
 }
 
-struct parser_result dequeue() {
-    struct parser_result data = dataArray[front++];
-    if (front == MAX) {
+struct message_manager_element* queue_dequeue() {
+     while(queue_isEmpty()){
+        //Waiting until the server reader enqueues some request.
+        printf("Blocked dequeueing\n");
+        pthread_cond_wait(&queue_non_empty, &queue_mutex);
+    }
+    printf("Dequeued element on position %i!\n", front);
+    struct message_manager_element* data = dataArray[front++];
+    if (front == MAX_ENQUEUED_REQUESTS) {
         front = 0;
     }
     itemCount--;
+    pthread_cond_signal(&queue_non_full);
     return data;
+    
 }

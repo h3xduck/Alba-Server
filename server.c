@@ -10,94 +10,49 @@
 #include <unistd.h>
 #include "parser.h"
 #include "database.h"
+#include "messages.h"
+#include "queue.h"
+#include "constants.h"
 
-#define PROTOCOL_STANDARD_MESSAGE_LENGTH 1024
 
-int fillerArrayLength = PROTOCOL_STANDARD_MESSAGE_LENGTH * sizeof(char);
-char* fillerArray; //memory allocated at main.
+
+pthread_mutex_t queue_mutex;  //For the server reader.
+pthread_cond_t queue_non_empty;
+pthread_cond_t queue_non_full; 
 
 void signalHandler() {
     printf("Process exited by signal handler\n");
     exit(0);
 }
 
-/**
- * 
- * 
- */
-json_object* create_custom_json(struct resultStringArray resultArray) {
-    json_object* jobj = json_object_new_object();
-    json_object* jstring0 = json_object_new_string(resultArray.contentArray[0]);
-    json_object* jstring1 = json_object_new_string(resultArray.contentArray[1]);
-    json_object* jstring2 = json_object_new_string(resultArray.contentArray[2]);
-
-    json_object_object_add(jobj, "Date", jstring0);
-    json_object_object_add(jobj, "Content", jstring1);
-    json_object_object_add(jobj, "User", jstring2);
-    printf("The json object created: %s\n", json_object_to_json_string(jobj));
-
-    return jobj;
-}
-
-/**
- * Generic function to send a message to the client.
- * @param sock: socket descriptor
- * @param header: header for the message
- * @param content: content to send
- */ 
-void send_message(int sock, const char* header, const char* content){
-    char* separator = "\n##ALBA##\n";
-    int totalLength = strlen(content)+ strlen(header) + strlen(separator) + fillerArrayLength + 1;
-    char* to_send = calloc(totalLength, sizeof(char));
-    printf("Sending %i bytes\n", totalLength);
-
-    //First, the header
-    strcpy(to_send, header);
-    //Next, the content of the message (the token in this case)
-    strcat(to_send, content);
-    //We put a delimitor, unlikely to appear in a normal connection
-    strcat(to_send, separator);
-    //Finally we concatenate the string with the filler string
-    strcat(to_send, fillerArray);
-
-    int n = write(sock, to_send, PROTOCOL_STANDARD_MESSAGE_LENGTH);
-    printf("Sending %s\n", to_send);
-    if (n < 0) {
-        perror("ERROR writing to socket");
-        exit(1);
-    }
-
-    free(to_send);
-}
-
-
-/**
- * Sends a PONG message to the client connected to sock. 
- */ 
-void sendPONG(int sock){
-    send_message(sock, "PONG::", "Hello client");
-}
-
-void reading_thread_routine(int sock){
+void start_server_reader(int sock){
     char* line = NULL;
     size_t len = 0;
     ssize_t lines;
     char buffer[PROTOCOL_STANDARD_MESSAGE_LENGTH];
+
+    //We initialize our mutex and the conditional variables
+    pthread_mutex_init(&queue_mutex, NULL);
+    pthread_cond_init(&queue_non_full, NULL);
+    pthread_cond_init(&queue_non_empty, NULL);
+
     while (1) {
         if (lines = read(sock, buffer, PROTOCOL_STANDARD_MESSAGE_LENGTH) > 0) {
-            struct parser_result result = protocol_parse(buffer);
-            printf("Parser code for message is: %i\n", result.result_code);
-            printf("Parser buffer is %s\n", result.result_buffer);
+            struct parser_result *result = protocol_parse(buffer);
+            struct message_manager_element *element = malloc(sizeof(struct message_manager_element));
+            element->sock = sock;
+            element->struct_element = result;
+            printf("Parser code for message is: %i\n", result->result_code);
+            printf("Parser buffer is %s\n", result->result_buffer);
             //Here we decide what to do with the already parsed message.
-            switch (result.result_code)
-            {
-            case 3:
-                printf("Received PING\n");
-                sendPONG(sock);
-                break;
-            default:
-                break;
-            }
+
+            //Critical section
+            pthread_mutex_lock(&queue_mutex);
+            queue_enqueue(element);
+            pthread_mutex_unlock(&queue_mutex);
+            //End of critical section
+
+            
         }
         sleep(5);
     }
@@ -105,37 +60,7 @@ void reading_thread_routine(int sock){
     printf("Finished reader thread\n");
 }
 
-void send_init_connection_message(int sock) {
-    printf("Sending STARTCONN message\n");
-    send_message(sock, "STARTCONN::", "");
-}
 
-void send_end_connection_message(int sock) {
-    printf("Sending ENDCONN message\n");
-    send_message(sock, "ENDCONN::", "");
-}
-
-void send_DB_lastrow_as_JSON(int sock){
-    int n;
-    connectDB();
-    struct resultStringArray result = getLastRow();
-
-    send_init_connection_message(sock);  //Announcing start of message to the client
-
-    json_object* jobj = create_custom_json(result);
-    char* jobjstr = (char*)json_object_to_json_string_ext(jobj, JSON_C_TO_STRING_PRETTY);
-    printf("Received JSON string was: %s\n", jobjstr);
-    char* header = "INCLUDE::";
-
-    //Now that we have the complete message, we proceed to adjust it to the protocol.
-    char* token = strtok(jobjstr, "\n");
-    while (token != NULL) {
-        send_message(sock, header, token);
-        token = strtok(NULL, "\n");
-    }
-    printf("Completed JSON message!");
-    send_end_connection_message(sock);  //Announcing end of message to the client
-}
 
 
 /**
@@ -143,18 +68,14 @@ void send_DB_lastrow_as_JSON(int sock){
  */
 void doprocessing(int sock) {   
     printf("Starting processing\n");
-    reading_thread_routine(sock);
-    
-    
-    //send_DB_lastrow_as_JSON(sock);
 
-
-    while (1) {
-        printf("Trapped\n");
-        sleep(15);
-        //Trapped here for now, until implementation of listening of client's commands.
-        //Must not exit the proccess.
+    //Creating a thread pool, which will be in charge of processing client's requests when they are received.
+    pthread_t th[THREAD_POOL_NUM_THREADS];
+    for(int ii=0; ii<THREAD_POOL_NUM_THREADS; ii++){
+        pthread_create(&th[ii], NULL, (void *)message_manager_start, NULL);
     }
+    
+    start_server_reader(sock);
 }
 
 int main(int argc, char* argv[]) {
@@ -163,7 +84,6 @@ int main(int argc, char* argv[]) {
     struct sockaddr_in serv_addr, cli_addr;
     int n, pid;
     int conn_number = 0;
-    fillerArray = calloc(fillerArrayLength, sizeof(char));
 
     // First call to socket() function
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -228,5 +148,4 @@ int main(int argc, char* argv[]) {
 
     } // end of while
 
-    free(fillerArray);
 }

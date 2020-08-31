@@ -1,17 +1,19 @@
 #ifndef QUEUE_H_  
 #define QUEUE_H_
 
-struct parser_result top();
+#include <stdbool.h>
 
-bool isEmpty();
+struct message_manager_element* queue_top();
 
-bool isFull();
+bool queue_isEmpty();
 
-int size();
+bool queue_isFull();
 
-void enqueue(struct parser_result data);
+int queue_size();
 
-struct parser_result dequeue();
+void queue_enqueue(struct message_manager_element* data);
+
+struct message_manager_element* queue_dequeue();
 
 
 #endif

@@ -1,0 +1,7 @@
+#ifndef CONSTANTS_H_  
+#define CONSTANTS_H_
+
+#define PROTOCOL_STANDARD_MESSAGE_LENGTH 1024
+#define THREAD_POOL_NUM_THREADS 5
+
+#endif

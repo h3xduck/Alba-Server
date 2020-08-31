@@ -24,7 +24,7 @@ struct parser_result{
     char* result_buffer;
 };
 
-struct parser_result protocol_parse(char* buffer);
+struct parser_result* protocol_parse(char* buffer);
 
 
 #endif
