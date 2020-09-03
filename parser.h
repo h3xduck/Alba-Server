@@ -11,8 +11,9 @@ struct parser_result{
      * 4 if it is a PONG
      * 5 if it is a REQUEST (from the client)
      * -1 if error (parser could not parse)
-     * 100 if communication starts
-     * 200 if communication ends
+     * 100 if communication block starts
+     * 200 if communication block ends
+     * 300 if the client disconnects
      */ 
     int result_code; 
 

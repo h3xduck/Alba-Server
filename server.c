@@ -38,12 +38,14 @@ void start_server_reader(int sock){
 
     while (1) {
         if (lines = read(sock, buffer, PROTOCOL_STANDARD_MESSAGE_LENGTH) > 0) {
+            printf("Received: %s\n",buffer);
             struct parser_result *result = protocol_parse(buffer);
             struct message_manager_element *element = malloc(sizeof(struct message_manager_element));
             element->sock = sock;
             element->struct_element = result;
             printf("Parser code for message is: %i\n", result->result_code);
-            printf("Parser buffer is %s\n", result->result_buffer);
+            //printf("Parser buffer is %s\n", result->result_buffer);
+            
             //Here we decide what to do with the already parsed message.
 
             //Critical section
@@ -52,9 +54,13 @@ void start_server_reader(int sock){
             pthread_mutex_unlock(&queue_mutex);
             //End of critical section
 
-            
+            //Once enqueued, if the code was 300, the reader must stop too (the writer threads will exit and be collected right afterwards)
+            if(result->result_code == 300){
+                break;
+            }
+
         }
-        sleep(5);
+        sleep(1);
     }
 
     printf("Finished reader thread\n");
@@ -76,6 +82,11 @@ void doprocessing(int sock) {
     }
     
     start_server_reader(sock);
+
+    //Once here, we join the writer threads, which must have ended once the 300 code was received.
+    for(int ii=0; ii<THREAD_POOL_NUM_THREADS; ii++){
+        pthread_join(&th[ii], NULL);
+    }
 }
 
 int main(int argc, char* argv[]) {

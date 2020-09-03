@@ -36,7 +36,6 @@ int queue_size() {
 void queue_enqueue(struct message_manager_element* data) {
     while(queue_isFull()){
         //The server reader must wait for some thread to dequeue a task.
-        printf("Blocked enqueueing\n");
         pthread_cond_wait(&queue_non_full, &queue_mutex);
         
     }

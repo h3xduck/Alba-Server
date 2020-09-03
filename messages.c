@@ -1,33 +1,35 @@
 #include "messages.h"
 
+#include <json-c/json.h>
 #include <pthread.h>
 #include <stdio.h>
-#include "parser.h"
-#include "queue.h"
-#include "database.h"
-#include <json-c/json.h>
-#include "constants.h"
-#include <string.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
+#include "constants.h"
+#include "database.h"
+#include "parser.h"
+#include "queue.h"
+
 int fillerArrayLength = PROTOCOL_STANDARD_MESSAGE_LENGTH * sizeof(char);
-char* fillerArray; //memory allocated at start.
+char* fillerArray;  //memory allocated at start.
+
+bool client_requested_disconnect = false;  //Shared variable between threads, no mutex since we only care about when it goes to true, and it only changes to that value
 
 extern pthread_mutex_t queue_mutex;
 extern pthread_cond_t queue_non_empty;
 extern pthread_cond_t queue_non_full;
-
 
 /**
  * Generic function to send a message to the client.
  * @param sock: socket descriptor
  * @param header: header for the message
  * @param content: content to send
- */ 
-void send_message(int sock, const char* header, const char* content){
+ */
+void send_message(int sock, const char* header, const char* content) {
     char* separator = "\n##ALBA##\n";
-    int totalLength = strlen(content)+ strlen(header) + strlen(separator) + fillerArrayLength + 1;
+    int totalLength = strlen(content) + strlen(header) + strlen(separator) + fillerArrayLength + 1;
     char* to_send = calloc(totalLength, sizeof(char));
     printf("Sending %i bytes\n", totalLength);
 
@@ -68,7 +70,6 @@ json_object* create_custom_json(struct resultStringArray resultArray) {
     return jobj;
 }
 
-
 void send_init_connection_message(int sock) {
     printf("Sending STARTCONN message\n");
     send_message(sock, "STARTCONN::", "");
@@ -79,7 +80,7 @@ void send_end_connection_message(int sock) {
     send_message(sock, "ENDCONN::", "");
 }
 
-void send_DB_lastrow_as_JSON(int sock){
+void send_DB_lastrow_as_JSON(int sock) {
     int n;
     connectDB();
     struct resultStringArray result = getLastRow();
@@ -101,11 +102,10 @@ void send_DB_lastrow_as_JSON(int sock){
     send_end_connection_message(sock);  //Announcing end of message to the client
 }
 
-
 /**
  * Sends a PONG message to the client connected to sock. 
- */ 
-void sendPONG(int sock){
+ */
+void sendPONG(int sock) {
     send_message(sock, "PONG::", "Hello client");
 }
 
@@ -113,26 +113,32 @@ void* message_manager_start(void* param) {
     fillerArray = calloc(fillerArrayLength, sizeof(char));
     printf("Started message manager\n");
 
-    //Critical section
-    pthread_mutex_lock(&queue_mutex);
-    struct message_manager_element* element = queue_dequeue();
-    pthread_mutex_unlock(&queue_mutex);
-    printf("A message manager dequeued a message\n");
-    //End of critical section
+    while (!client_requested_disconnect) {
+        //Critical section
+        pthread_mutex_lock(&queue_mutex);
+        struct message_manager_element* element = queue_dequeue();
+        pthread_mutex_unlock(&queue_mutex);
+        printf("A message manager dequeued a message\n");
+        //End of critical section
 
-    //Now that we have the element, we evaluate it.
-    switch (element->struct_element->result_code) {
-        case 3:
-            printf("Received PING\n");
-            sendPONG(element->sock);
-            break;
-        default:
-            break;
+        //Now that we have the element, we evaluate it.
+        switch (element->struct_element->result_code) {
+            case 3:
+                printf("Received PING\n");
+                sendPONG(element->sock);
+                break;
+            case 300:
+                printf("Client disconnects\n");
+                client_requested_disconnect = true;
+            default:
+                break;
+        }
+
+        free(element->struct_element);
+        free(element);
     }
 
+    pthread_exit(0);
 
-    free(element->struct_element);
-    free(element);
     //TODO solve this: free(fillerArray);
 }
-

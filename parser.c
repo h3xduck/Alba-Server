@@ -7,12 +7,11 @@
 #define HEADER_SEPARATOR "::"
 #define PROTOCOL_SEPARATOR "\n##ALBA##\n"
 
-char* valid_protocol_headers[] = {"INCLUDE", "ERROR", "INFO", "PING", "PONG", "STARTCONN", "ENDCONN", "REQUEST"};
+char* valid_protocol_headers[] = {"INCLUDE", "ERROR", "INFO", "PING", "PONG", "STARTCONN", "ENDCONN", "REQUEST", "DISCONN"};
 
 struct parser_result* protocol_parse(char* buffer){
     struct parser_result *result = malloc(sizeof(struct parser_result));
     result->result_buffer = malloc(sizeof(char)*1024);
-    result->result_code = malloc(sizeof(int));
     char* content;
     
     char* token = strtok(buffer, HEADER_SEPARATOR);
@@ -48,6 +47,9 @@ struct parser_result* protocol_parse(char* buffer){
         }else if(strcmp(token, valid_protocol_headers[7])==0){
             result->result_code = 5;
             result->result_buffer = content;
+        }else if(strcmp(token, valid_protocol_headers[8])==0){
+            result->result_code = 300;
+            result->result_buffer = NULL;
         }else{
             //Invalid header
             perror("Invalid header received, package invalid");
