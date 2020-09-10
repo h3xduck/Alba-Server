@@ -15,5 +15,7 @@ void queue_enqueue(struct message_manager_element* data);
 
 struct message_manager_element* queue_dequeue();
 
+void queue_print_positions();
+
 
 #endif

@@ -15,8 +15,6 @@
 int fillerArrayLength = PROTOCOL_STANDARD_MESSAGE_LENGTH * sizeof(char);
 char* fillerArray;  //memory allocated at start.
 
-bool client_requested_disconnect = false;  //Shared variable between threads, no mutex since we only care about when it goes to true, and it only changes to that value
-
 extern pthread_mutex_t queue_mutex;
 extern pthread_cond_t queue_non_empty;
 extern pthread_cond_t queue_non_full;
@@ -109,36 +107,50 @@ void sendPONG(int sock) {
     send_message(sock, "PONG::", "Hello client");
 }
 
-void* message_manager_start(void* param) {
+void* message_manager_start(void* params) {
+    //First of all we parse the thread parameter.
+    struct message_manager_param* param = (struct message_manager_param*) params;    
+    int* FLAG_TERMINATE_THREAD = param->FLAG_TERMINATE_THREAD;
+    int thread_id = param->thread_id;
+    free(params);
     fillerArray = calloc(fillerArrayLength, sizeof(char));
-    printf("Started message manager\n");
+    
 
-    while (!client_requested_disconnect) {
+    while (!*FLAG_TERMINATE_THREAD) {
         //Critical section
+        printf("Started writer thread loop %i\n", thread_id);
         pthread_mutex_lock(&queue_mutex);
+        printf("Thread %i acquired lock\n", thread_id);
         struct message_manager_element* element = queue_dequeue();
         pthread_mutex_unlock(&queue_mutex);
-        printf("A message manager dequeued a message\n");
+        printf("Writer thread %i dequeued a message\n", thread_id);
         //End of critical section
 
         //Now that we have the element, we evaluate it.
         switch (element->struct_element->result_code) {
+            case -1:
+                printf("Received ERROR\n");
+                break;
             case 3:
                 printf("Received PING\n");
                 sendPONG(element->sock);
                 break;
             case 300:
                 printf("Client disconnects\n");
-                client_requested_disconnect = true;
             default:
                 break;
         }
 
         free(element->struct_element);
         free(element);
+
+        printf("Termination flag for thread %i is set to %i\n",thread_id, *FLAG_TERMINATE_THREAD );
+        
     }
 
+    printf("The termination flag was set to %i, thread %i exits\n", *FLAG_TERMINATE_THREAD, thread_id);
     pthread_exit(0);
+    
 
     //TODO solve this: free(fillerArray);
 }

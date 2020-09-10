@@ -31,11 +31,6 @@ void start_server_reader(int sock){
     ssize_t lines;
     char buffer[PROTOCOL_STANDARD_MESSAGE_LENGTH];
 
-    //We initialize our mutex and the conditional variables
-    pthread_mutex_init(&queue_mutex, NULL);
-    pthread_cond_init(&queue_non_full, NULL);
-    pthread_cond_init(&queue_non_empty, NULL);
-
     while (1) {
         if (lines = read(sock, buffer, PROTOCOL_STANDARD_MESSAGE_LENGTH) > 0) {
             printf("Received: %s\n",buffer);
@@ -56,11 +51,13 @@ void start_server_reader(int sock){
 
             //Once enqueued, if the code was 300, the reader must stop too (the writer threads will exit and be collected right afterwards)
             if(result->result_code == 300){
+                printf("Received code 300\n");
                 break;
             }
 
+        }else{
+            printf("Nothing read\n");
         }
-        sleep(1);
     }
 
     printf("Finished reader thread\n");
@@ -75,18 +72,62 @@ void start_server_reader(int sock){
 void doprocessing(int sock) {   
     printf("Starting processing\n");
 
+    //We initialize our mutex and the conditional variables
+    pthread_mutex_init(&queue_mutex, NULL);
+    pthread_cond_init(&queue_non_full, NULL);
+    pthread_cond_init(&queue_non_empty, NULL);
+
     //Creating a thread pool, which will be in charge of processing client's requests when they are received.
     pthread_t th[THREAD_POOL_NUM_THREADS];
+    int* FLAG_TERMINATE_THREAD = malloc(sizeof(int));
+    *FLAG_TERMINATE_THREAD = 0;
     for(int ii=0; ii<THREAD_POOL_NUM_THREADS; ii++){
-        pthread_create(&th[ii], NULL, (void *)message_manager_start, NULL);
+        struct message_manager_param* thread_param = malloc(sizeof(struct message_manager_param));
+        thread_param->FLAG_TERMINATE_THREAD = FLAG_TERMINATE_THREAD;
+        thread_param->thread_id = ii;
+        pthread_create(&th[ii], NULL, (void *)message_manager_start, thread_param);
     }
-    
+
     start_server_reader(sock);
 
-    //Once here, we join the writer threads, which must have ended once the 300 code was received.
-    for(int ii=0; ii<THREAD_POOL_NUM_THREADS; ii++){
-        pthread_join(&th[ii], NULL);
+    //Once here, we join the writer threads, which must be ended once the 300 code was received.
+
+    printf("Requesting to cancel writer threads...\n");
+    *FLAG_TERMINATE_THREAD = 1;
+
+    //The reason for using a flag and not a POSIX function such as thread_cancel is the great amount of complexity on the
+    //writer thread function. Mutexes need to be released, previously enqueued requests need to be finished (not just ignored if the
+    //client disconnects) and so on, so we must make sure the threads gracefully terminate instead of just terminating them.
+    //Note that the great amount of cancellation points in the functions makes impredicible where the thread will end even when having set
+    //PTHREAD_CANCEL_DEFERRED.
+
+    //queue_print_positions();
+    printf("Enqueueing fake elements...\n");
+    for(int ii = 0; ii < THREAD_POOL_NUM_THREADS; ii++){
+        char fake_buffer[] = {"PLACEHOLDER"};
+        struct parser_result *result = protocol_parse(fake_buffer);
+        struct message_manager_element *element = malloc(sizeof(struct message_manager_element));
+        element->sock = sock;
+        element->struct_element = result;
+        printf("Trying to enqueue the fake element with code %i...\n", element->struct_element->result_code);
+        pthread_mutex_lock(&queue_mutex);
+        queue_enqueue(element);
+        pthread_mutex_unlock(&queue_mutex);
     }
+    
+    printf("Waiting for writer threads to cancel...\n");
+    for(int ii=0; ii<THREAD_POOL_NUM_THREADS; ii++){
+        pthread_join(th[ii], NULL);
+        printf("Joined thread %i\n", ii);
+    }
+
+    printf("Joined all writer threads!\n");
+
+    pthread_mutex_destroy(&queue_mutex);
+    pthread_cond_destroy(&queue_non_full);
+    pthread_cond_destroy(&queue_non_empty);
+
+    printf("Successful exit\n");
 }
 
 int main(int argc, char* argv[]) {
@@ -118,7 +159,7 @@ int main(int argc, char* argv[]) {
         exit(1);
     }
 
-    //Registering SIGINT signal handler. The signal is received by BOTH THE PARENT AND CHILD.
+    //Registering SIGINT signal handler. The signal is received by BOTH THE PARENT AND CHILDREN.
     signal(SIGINT, signalHandler);
 
     printf("Started listening to connections\n");

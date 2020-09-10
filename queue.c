@@ -36,6 +36,7 @@ int queue_size() {
 void queue_enqueue(struct message_manager_element* data) {
     while(queue_isFull()){
         //The server reader must wait for some thread to dequeue a task.
+        printf("Blocked enqueueing\n");
         pthread_cond_wait(&queue_non_full, &queue_mutex);
         
     }
@@ -43,8 +44,8 @@ void queue_enqueue(struct message_manager_element* data) {
         rear = -1;
     }
     dataArray[++rear] = data;
-    printf("Enqueue element on position %i!\n", rear);
     itemCount++;
+    printf("Enqueued element on position %i. Remaining elements: %i\n", rear, itemCount);
     pthread_cond_signal(&queue_non_empty);
 }
 
@@ -54,7 +55,7 @@ struct message_manager_element* queue_dequeue() {
         printf("Blocked dequeueing\n");
         pthread_cond_wait(&queue_non_empty, &queue_mutex);
     }
-    printf("Dequeued element on position %i!\n", front);
+    printf("Dequeued element on position %i. Remaining elements: %i\n", front, itemCount-1);
     struct message_manager_element* data = dataArray[front++];
     if (front == MAX_ENQUEUED_REQUESTS) {
         front = 0;
@@ -63,4 +64,9 @@ struct message_manager_element* queue_dequeue() {
     pthread_cond_signal(&queue_non_full);
     return data;
     
+}
+
+void queue_print_positions(){
+
+    printf("QUEUE:\nFront = %i\nRear = %i\n", front, rear);
 }
