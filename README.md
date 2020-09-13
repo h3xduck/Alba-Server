@@ -6,7 +6,7 @@ The server project is written in C and it is POSIX compliant. It supports multip
 ## Features overview 
 - [x] Build a SocketServer and manage multiple clients on separate processes.
 - [x] Construct a PING-PONG client-server system to manage disconnections on both sides.
-- [x] Send and receive messages from clients using TCP sockets, defining [the ALBAProtocol](https://github.com/marsan27/Alba/blob/master/ALBAProtocol.md).
+- [x] Send and receive messages from clients using TCP sockets, defining [the ALBAProtocol](https://github.com/marsan27/Alba-Server/blob/master/ALBAProtocol.md).
 - [x] Construct a process-dependant circular queue to store requests and tasks for each client
 - [x] Create a thread pool for each process, which retrieve elements from the process queue, ensuring minimum response times and maximizing performance.
 - [x] Use mutex and conditional variables to avoid race conditions and ensure the critical sections are thread-safe. Also, implemented non-blocking socket read/write operations, maximizing resposiveness.
