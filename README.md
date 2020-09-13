@@ -1,7 +1,7 @@
 # ALBA - Server
 This repository contains the source code of the Alba Server, which connects to the ALBA mobile app. For more information about what is ALBA and the app, have a look at [this other repo](https://github.com/marsan27/Alba/). Please note that both ALBA and ALBA-Server are currently on development and therefore they are **potentially unstable**.
 
-The server project is written in C and it is POSIX compliant. It supports multiple simultaneous clients through a combination of multithreading and multiprocessing. DB management is handled with MySQL, and therefore **you will need one MySQL local installation to run this software**. Check <<<<<db setup>>>>> for some info on the configurations needed.
+The server project is written in C and it is POSIX compliant. It supports multiple simultaneous clients through a combination of multithreading and multiprocessing. DB management is handled with MySQL, and therefore **you will need one MySQL local installation to run this software**. Until the DB configuration script is ready, please check below the configurations to be made.
 
 ## Features overview 
 - [x] Build a SocketServer and manage multiple clients on separate processes.
@@ -24,14 +24,22 @@ The server project is written in C and it is POSIX compliant. It supports multip
 
 ## Build and run
 ```shell
+##Downloading the program
 git clone git://github.com/marsan27/alba-server.git
 
 cd alba-server
 
+##Build
 make all
 
+##Run
 ./server
 ```
+Also, you will need to setup a MySQL DB with the following parameters:
+* Database name = "VERNOM"
+* GRANT acces to user = "Vernom" and password = "vernomPassword";
+
+Note: Hardcoded passwords are not secure. This will change in the future.
 
 ## Disclaimer
 This is a personal side-project and by no means it is supposed to come with any warranty, it is offered AS-IS and I am not responsible of any harm derived from its use.
