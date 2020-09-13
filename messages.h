@@ -15,4 +15,6 @@ typedef struct message_manager_param{
 
 void* message_manager_start(void* param);
 
+void sendPING(int sock);  //The only message that can be sent not being on a writer thread. 
+
 #endif

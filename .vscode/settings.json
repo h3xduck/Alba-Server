@@ -7,6 +7,7 @@
         "unordered_map": "c",
         "vector": "c",
         "ostream": "c",
-        "random": "cpp"
+        "random": "cpp",
+        "cerrno": "c"
     }
 }
