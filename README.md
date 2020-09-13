@@ -13,6 +13,7 @@ The server project is written in C and it is POSIX compliant. It supports multip
 - [x] Implemented MySQL DB operations, which are always called from background threads, avoiding unnecessary wait times.
 - [x] Constructed thread-safe program start and halt, without asynchronous cancellations.
 - [x] Created a Parser in charge of translating socket messages into different codes according to the ALBAProtocol.
+- [x] Send long messages by parts using JSON format and correctly announcing it comes divided into small chunks.
 
 ## Roadmap
 - [ ] Implement more MySQL operations and tables according to different requests the client may send.
@@ -20,6 +21,17 @@ The server project is written in C and it is POSIX compliant. It supports multip
 - [ ] Accept different arguments at the program start, allowing for different modes.
 - [ ] Create a basic GUI (probably with QT5).
 - [ ] Keep ideas flowing.
+
+## Build and run
+```shell
+git clone git://github.com/marsan27/alba-server.git
+
+cd alba-server
+
+make all
+
+./server
+```
 
 ## Disclaimer
 This is a personal side-project and by no means it is supposed to come with any warranty, it is offered AS-IS and I am not responsible of any harm derived from its use.
