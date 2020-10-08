@@ -1,6 +1,6 @@
 # ALBAProtocol
 
-This protocol defines how messages are sent between clients and server using TCP.
+This application layer protocol defines how messages are sent between clients and server.
 
 ## Message structure
 Every message sent/received by both the server and clients is 1024 bytes long. Messages consist of:
@@ -16,7 +16,7 @@ Every message sent/received by both the server and clients is 1024 bytes long. M
 |  STARTCONN |          No         |         Yes         | Start of long connection divided into parts. Ends with ENDCONN |
 |   ENDCONN  |          No         |         Yes         |                     End of long connection                     |
 |   REQUEST  |         Yes         |          No         |                        Request some info                       |
-|   DISCONN  |         Yes         |          NO         |                 Disconnection message by client                |
+|   DISCONN  |         Yes         |          No         |                 Disconnection message by client                |
 
 
 * Then, a header separator, namely ```::```.
