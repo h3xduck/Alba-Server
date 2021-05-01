@@ -8,31 +8,31 @@ all: server
 # To create the object file server.o, we need the source
 # files server.c, messages.h, messages.c, queue.h, queue.c, database.h, database.c, parser.h and parser.c:
 #
-server.o:  server.c database.h database.c parser.h parser.c queue.h queue.c messages.c messages.h
+server.o:  src/server.c include/database.h src/database.c include/parser.h src/parser.c include/queue.h src/queue.c src/messages.c include/messages.h
 	$(CC) $(CFLAGS) -c server.c
 
 # To create the object file database.o, we need the source files
 # database.c and database.h:
 #
-database.o:  database.c database.h 
+database.o:  src/database.c include/database.h 
 	$(CC) $(CFLAGS) -c database.c
 
 # To create the object file parser.o, we need the source files
 # parser.c and parser.h:
 #
-parser.o:  parser.c parser.h 
+parser.o:  src/parser.c include/parser.h 
 	$(CC) $(CFLAGS) -c parser.c
 
 # To create the object file queue.o, we need the source files
 # queue.c and queue.h:
 #
-queue.o:  queue.c queue.h 
+queue.o:  rc/queue.c include/squeue.h 
 	$(CC) $(CFLAGS) -c queue.c
 
 # To create the object file messages.o, we need the source files
 # messages.c and messages.h:
 #
-messages.o:  messages.c messages.h 
+messages.o:  src/messages.c include/messages.h 
 	$(CC) $(CFLAGS) -c messages.c
 
 # To create the executable file count we need the object files
