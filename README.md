@@ -1,12 +1,15 @@
+![Maintainability](https://img.shields.io/static/v1?label=maintainability&message=DEPRECATED&color=red)
+![GitHub code size in bytes](https://img.shields.io/github/languages/code-size/h3xduck/Alba-Server)
+![GitHub last commit](https://img.shields.io/github/last-commit/h3xduck/Alba-Server)
 # ALBA - Server
-This repository contains the source code of the Alba Server, which connects to the ALBA mobile app. For more information about what is ALBA and the app, have a look at [this other repo](https://github.com/marsan27/Alba/). Please note that both ALBA and ALBA-Server are currently on development and therefore they are **potentially unstable**.
+This repository contains the source code of the Alba Server, which connects to the ALBA mobile app. For more information about what is ALBA and the app, have a look at [this other repo](https://github.com/h3xduck/Alba/). Please note that both ALBA and ALBA-Server are currently on development and therefore they are **potentially unstable**.
 
 The server project is written in C and it is POSIX compliant. It supports multiple simultaneous clients through a combination of multithreading and multiprocessing. DB management is handled with MySQL, and therefore **you will need one MySQL local installation to run this software**. Until the DB configuration script is ready, please read [this](#build-and-run) for the configurations to be made.
 
 ## Features overview (of the server)
 - [x] Build a SocketServer and manage multiple clients on separate processes.
 - [x] Construct a PING-PONG client-server system to manage disconnections on both sides.
-- [x] Send and receive messages from clients using TCP sockets, defining an application layer protocol: [the ALBAProtocol](https://github.com/marsan27/Alba-Server/blob/master/ALBAProtocol.md).
+- [x] Send and receive messages from clients using TCP sockets, defining an application layer protocol: [the ALBAProtocol](https://github.com/h3xduck/Alba-Server/blob/master/ALBAProtocol.md).
 - [x] Construct a process-dependant circular queue to store requests and tasks for each client
 - [x] Create a thread pool for each process, which retrieve elements from the process queue, ensuring minimum response times and maximizing performance.
 - [x] Use mutex and conditional variables to avoid race conditions and ensure the critical sections are thread-safe. Also, implemented non-blocking socket read/write operations, maximizing resposiveness.
@@ -25,7 +28,7 @@ The server project is written in C and it is POSIX compliant. It supports multip
 ## Build and run
 ```shell
 ##Downloading the program
-git clone git://github.com/marsan27/alba-server.git
+git clone git://github.com/h3xduck/alba-server.git
 
 cd alba-server
 
@@ -45,4 +48,4 @@ Note: Hardcoded passwords are not secure. This will change in the future.
 This is a personal side-project and by no means it is supposed to come with any warranty, it is offered AS-IS and I am not responsible of any harm derived from its use.
 
 ## License
-This project is released under the GPL v3 license. See [LICENSE](https://github.com/marsan27/Alba-Server/blob/master/LICENSE).
+This project is released under the GPL v3 license. See [LICENSE](https://github.com/h3xduck/Alba-Server/blob/master/LICENSE).
