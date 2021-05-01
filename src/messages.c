@@ -154,6 +154,11 @@ void* message_manager_start(void* params) {
             case 4:
                 printf("Received PONG\n");
                 break;
+            case 5:
+                printf("Client request arrived\n");
+                //TODO: This is temporal and just a test. We need a parser for REQUESTS too.
+                send_DB_lastrow_as_JSON(element->sock);
+                break;
             case 300:
                 printf("Client disconnects\n");
             default:

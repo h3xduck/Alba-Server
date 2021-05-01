@@ -4,7 +4,7 @@
 struct parser_result{
     /**
      * Code indicating result of parsing the message:
-     * 0 if it is a new message to include in DB (they always come in JSON format)
+     * 0 if it is a new message to INCLUDE in DB (they always come in JSON format)
      * 1 if it is an error sent by the client
      * 2 if it is some info sent by the client, not needed to be included in the DB
      * 3 if it is a PING
