@@ -1,4 +1,4 @@
-#include "messages.h"
+#include "../include/messages.h"
 
 #include <json-c/json.h>
 #include <pthread.h>
@@ -7,10 +7,10 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "constants.h"
-#include "database.h"
-#include "parser.h"
-#include "queue.h"
+#include "../include/constants.h"
+#include "../include/database.h"
+#include "../include/parser.h"
+#include "../include/queue.h"
 #include <sys/socket.h>
 #include <errno.h>
 
@@ -98,7 +98,7 @@ void send_DB_lastrow_as_JSON(int sock) {
     json_object* jobj = create_custom_json(result);
     char* jobjstr = (char*)json_object_to_json_string_ext(jobj, JSON_C_TO_STRING_PRETTY);
     printf("Received JSON string was: %s\n", jobjstr);
-    char* header = "INCLUDE::";
+    char* header = "../include::";
 
     //Now that we have the complete message, we proceed to adjust it to the protocol.
     char* token = strtok(jobjstr, "\n");

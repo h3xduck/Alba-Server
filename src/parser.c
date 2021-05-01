@@ -1,4 +1,4 @@
-#include "parser.h"
+#include "../include/parser.h"
 #include <string.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -7,7 +7,7 @@
 #define HEADER_SEPARATOR "::"
 #define PROTOCOL_SEPARATOR "\n##ALBA##\n"
 
-char* valid_protocol_headers[] = {"INCLUDE", "ERROR", "INFO", "PING", "PONG", "STARTCONN", "ENDCONN", "REQUEST", "DISCONN"};
+char* valid_protocol_headers[] = {"../include", "ERROR", "INFO", "PING", "PONG", "STARTCONN", "ENDCONN", "REQUEST", "DISCONN"};
 
 struct parser_result* protocol_parse(char* buffer){
     struct parser_result *result = malloc(sizeof(struct parser_result));

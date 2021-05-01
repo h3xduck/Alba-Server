@@ -2,9 +2,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "parser.h"
+#include "../include/parser.h"
 #include <pthread.h>
-#include "messages.h"
+#include "../include/messages.h"
 
 extern pthread_mutex_t queue_mutex;  
 extern pthread_cond_t queue_non_empty;

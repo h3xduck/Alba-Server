@@ -9,11 +9,11 @@
 #include <time.h>
 #include <unistd.h>
 
-#include "constants.h"
-#include "database.h"
-#include "messages.h"
-#include "parser.h"
-#include "queue.h"
+#include "../include/constants.h"
+#include "../include/database.h"
+#include "../include/messages.h"
+#include "../include/parser.h"
+#include "../include/queue.h"
 
 pthread_mutex_t queue_mutex;  //For the server reader.
 pthread_cond_t queue_non_empty;
